@@ -42,57 +42,47 @@ jobs:
           mkdir -p /packages
           chmod 777 /packages
 
-      - name: Build dependency chain with signing
+      - name: Build and sign dependency chain
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
-          PKGDEST: /packages
         run: |
-          # Locate GPG home and share with builder user
-          GPGHOME=$(gpgconf --list-dirs homedir)
-          echo "GPG home: $GPGHOME"
-          chmod 755 "$GPGHOME" 2>/dev/null || true
-          chmod 644 "$GPGHOME"/pubring.kbx "$GPGHOME"/trustdb.gpg 2>/dev/null || true
-          chmod 600 "$GPGHOME"/private-keys-v1.d/* "$GPGHOME"/secring.gpg 2>/dev/null || true
+          GPG_DIR=$(gpgconf --list-dirs homedir)
+          cp -r "$GPG_DIR" /home/builder/.gnupg
+          chown -R builder:builder /home/builder/.gnupg
+          chmod 700 /home/builder/.gnupg
+          chmod 600 /home/builder/.gnupg/pubring.kbx /home/builder/.gnupg/trustdb.gpg 2>/dev/null || true
+          chmod 700 /home/builder/.gnupg/private-keys-v1.d 2>/dev/null || true
+          chmod 600 /home/builder/.gnupg/private-keys-v1.d/* 2>/dev/null || true
+          chmod 644 /home/builder/.gnupg/*.conf 2>/dev/null || true
 
           build_and_sign() {
             local dir="$1"
             cd "$dir"
             sudo -u builder \
-              GNUPGHOME="$GPGHOME" \
-              PKGDEST="$PKGDEST" \
+              GNUPGHOME=/home/builder/.gnupg \
               GPGKEY="$GPGKEY" \
+              PKGDEST=/packages \
               makepkg --syncdeps --noconfirm --sign || exit 1
             cd ..
           }
 
-          install_pkg() {
-            local pkg
-            pkg=$(ls -t /packages/*.pkg.tar.zst 2>/dev/null | head -1)
-            if [ -n "$pkg" ]; then
-              pacman --noconfirm -U "$pkg" || exit 1
-            else
-              echo "ERROR: no package found to install" >&2
-              exit 1
-            fi
-          }
-
           build_and_sign libsepol
-          install_pkg
+          pacman --noconfirm -U /packages/libsepol-*.pkg.tar.zst || exit 1
 
           build_and_sign libselinux
-          install_pkg
+          pacman --noconfirm -U /packages/libselinux-*.pkg.tar.zst || exit 1
 
           build_and_sign checkpolicy
-          install_pkg
+          pacman --noconfirm -U /packages/checkpolicy-*.pkg.tar.zst || exit 1
 
           build_and_sign semodule-utils
-          install_pkg
+          pacman --noconfirm -U /packages/semodule-utils-*.pkg.tar.zst || exit 1
 
           build_and_sign libsemanage
-          install_pkg
+          pacman --noconfirm -U /packages/libsemanage-*.pkg.tar.zst || exit 1
 
           build_and_sign policycoreutils
-          install_pkg
+          pacman --noconfirm -U /packages/policycoreutils-*.pkg.tar.zst || exit 1
 
           build_and_sign selinux-refpolicy-arch
 
@@ -106,13 +96,14 @@ jobs:
             [ -f "$sig" ] && cp "$sig" repo/x86_64/
           done
           cp public.asc repo/x86_64/
+          gpg --verify repo/x86_64/*.pkg.tar.zst.sig || exit 1
           repo-add --sign --verify --include-sigs --key "$GPGKEY" \
             repo/x86_64/selinux.db.tar.zst repo/x86_64/*.pkg.tar.zst
           cd repo/x86_64
           ln -sf selinux.db.tar.zst selinux.db
           ln -sf selinux.files.tar.zst selinux.files
 
-      - name: Verify package signatures
+      - name: Verify signatures
         run: |
           for pkg in repo/x86_64/*.pkg.tar.zst; do
             gpg --verify "${pkg}.sig" "${pkg}" || exit 1

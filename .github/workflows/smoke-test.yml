@@ -1,0 +1,80 @@
+name: Smoke Test - GPG Signing Pipeline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Import GPG key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Debug GPG
+        run: |
+          gpg --list-secret-keys
+          gpg --list-public-keys
+          GPG_DIR=$(gpgconf --list-dirs homedir)
+          echo "GPG_DIR=$GPG_DIR"
+          ls -laR "$GPG_DIR"
+
+      - name: Setup build user
+        run: |
+          pacman -Syu --noconfirm base-devel
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+          mkdir -p /packages
+          chmod 777 /packages
+
+      - name: Try sigining as root (will fail - expected)
+        id: root_sign
+        continue-on-error: true
+        env:
+          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+        run: |
+          cd selinux-smoke-test
+          PKGDEST=/packages makepkg --clean --noconfirm --sign
+        timeout-minutes: 1
+
+      - name: Try as builder - copy keyring
+        env:
+          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+        run: |
+          GPG_DIR=$(gpgconf --list-dirs homedir)
+          mkdir -p /home/builder/.gnupg
+          cp -r "$GPG_DIR"/* /home/builder/.gnupg/
+          chown -R builder:builder /home/builder/.gnupg
+          find /home/builder/.gnupg -type d -exec chmod 700 {} +
+          find /home/builder/.gnupg -type f -exec chmod 600 {} +
+          echo "=== builder keyring ==="
+          sudo -u builder GNUPGHOME=/home/builder/.gnupg gpg --list-secret-keys
+          cd selinux-smoke-test
+          sudo -u builder \
+            GNUPGHOME=/home/builder/.gnupg \
+            GPGKEY="$GPGKEY" \
+            PKGDEST=/packages \
+            makepkg --clean --noconfirm --sign
+
+      - name: Verify signature
+        run: |
+          gpg --verify /packages/*.pkg.tar.zst.sig /packages/*.pkg.tar.zst
+          echo "=== SMOKE TEST PASSED ==="
+
+      - name: Upload signed package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signed-package
+          path: /packages/

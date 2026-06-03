@@ -1,0 +1,18 @@
+# Maintainer: SELinux PoC
+# Smoke-test package for GPG-signed pacman repo pipeline
+
+pkgname=selinux-smoke-test
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Smoke test package for signed pacman repository pipeline"
+arch=('any')
+url="https://github.com/lenucksi/selinux"
+license=('MIT')
+depends=()
+makedepends=()
+
+package() {
+  mkdir -p "$pkgdir/usr/share/doc/selinux-smoke-test"
+  echo "SELinux GPG-Signed Repo PoC - $(date -u)" > \
+    "$pkgdir/usr/share/doc/selinux-smoke-test/VERSION"
+}
