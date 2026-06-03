@@ -1,0 +1,33 @@
+# Maintainer: PoC GPG-signed Arch repo
+
+pkgname=hello-go
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Hello from the signed Arch repo! - PoC GPG-signed pacman repo"
+arch=('x86_64')
+url="https://github.com/lenucksi/selinux"
+license=('MIT')
+makedepends=('go')
+depends=('glibc')
+source=("main.go" "go.mod")
+sha256sums=('SKIP' 'SKIP')
+
+build() {
+  cd "$srcdir"
+  export CGO_CPPFLAGS="${CPPFLAGS}"
+  export CGO_CFLAGS="${CFLAGS}"
+  export CGO_CXXFLAGS="${CXXFLAGS}"
+  export CGO_LDFLAGS="${LDFLAGS}"
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+  go build -o hello-go .
+}
+
+check() {
+  cd "$srcdir"
+  go vet ./...
+}
+
+package() {
+  cd "$srcdir"
+  install -Dm755 hello-go "$pkgdir/usr/bin/hello-go"
+}
