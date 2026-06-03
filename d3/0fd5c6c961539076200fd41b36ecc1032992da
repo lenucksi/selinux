@@ -1,0 +1,19 @@
+.github/workflows/hello-go.yml
+  s_45a7eefb8249bf::t_221fe21340dad6 20-23,42,45-68,70-76,79-115,118,121,124-125,127-178,184-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d30fd5c6c961539076200fd41b36ecc1032992da",
+  "prompts": {},
+  "sessions": {
+    "s_45a7eefb8249bf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1730ada2effeq7ONhkGZOMTNIS",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Lenucksi <lenucksi@users.noreply.github.com>"
+    }
+  }
+}
