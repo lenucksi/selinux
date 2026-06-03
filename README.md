@@ -25,6 +25,31 @@ SigLevel = Never
 ```
 While the repository remains unsigned, SigLevel has to be set to Never.
 
+### Signed Repository (PoC)
+
+This repository also publishes a signed pacman repository via GitHub Pages
+at `https://lenucksi.github.io/selinux/x86_64`.
+
+To use the signed repository:
+
+1. Import and trust the signing key:
+```bash
+sudo pacman-key --recv-key A66EAD29600BEF3A2F09B945EB8AEC2BA4B6DC1F --keyserver keyserver.ubuntu.com
+sudo pacman-key --lsign-key A66EAD29600BEF3A2F09B945EB8AEC2BA4B6DC1F
+```
+
+2. Add to `/etc/pacman.conf`:
+```
+[selinux-poc]
+SigLevel = Required DatabaseOptional
+Server = https://lenucksi.github.io/selinux/x86_64
+```
+
+3. Install:
+```bash
+sudo pacman -Sy selinux-refpolicy-arch
+```
+
 Build order
 -----------
 
