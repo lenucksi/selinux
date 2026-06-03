@@ -41,15 +41,22 @@ jobs:
           chown -R builder:builder .
           mkdir -p /packages
 
+      - name: Debug GPG environment
+        run: |
+          echo "GNUPGHOME=$GNUPGHOME"
+          echo "FINGERPRINT=${{ steps.gpg.outputs.fingerprint }}"
+          ls -la "$GNUPGHOME" 2>/dev/null || echo "GNUPGHOME not accessible"
+          gpg --list-secret-keys
+
       - name: Build dependency chain with signing
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
-          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
           PKGDEST: /packages
         run: |
-          # Copy GPG keyring to builder user
-          cp -r "$GNUPGHOME" /home/builder/.gnupg
-          chown -R builder:builder /home/builder/.gnupg
+          # Share GPG keyring with builder user
+          chmod 755 "$GNUPGHOME"
+          chmod 644 "$GNUPGHOME"/* 2>/dev/null || true
+          chmod 600 "$GNUPGHOME"/private-keys-v1.d/* 2>/dev/null || true
 
           # Build chain: libsepol → libselinux → checkpolicy → semodule-utils
           #                       → libsemanage → policycoreutils → selinux-refpolicy-arch
@@ -57,7 +64,7 @@ jobs:
             local dir="$1"
             cd "$dir"
             sudo -u builder \
-              GNUPGHOME=/home/builder/.gnupg \
+              GNUPGHOME="$GNUPGHOME" \
               PKGDEST="$PKGDEST" \
               GPGKEY="$GPGKEY" \
               makepkg --syncdeps --noconfirm --sign || exit 1
@@ -98,7 +105,6 @@ jobs:
       - name: Create signed pacman repository
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
-          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
         run: |
           mkdir -p repo/x86_64
           cp /packages/*.pkg.tar.zst repo/x86_64/
@@ -113,8 +119,6 @@ jobs:
           ln -sf selinux.files.tar.zst selinux.files
 
       - name: Verify package signatures
-        env:
-          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
         run: |
           for pkg in repo/x86_64/*.pkg.tar.zst; do
             gpg --verify "${pkg}.sig" "${pkg}" || exit 1
