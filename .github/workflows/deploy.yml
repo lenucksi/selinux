@@ -40,6 +40,7 @@ jobs:
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
           mkdir -p /packages
+          chmod 777 /packages
 
       - name: Build dependency chain with signing
         env:
@@ -49,9 +50,9 @@ jobs:
           # Locate GPG home and share with builder user
           GPGHOME=$(gpgconf --list-dirs homedir)
           echo "GPG home: $GPGHOME"
-          chmod 755 "$GPGHOME"
-          chmod 644 "$GPGHOME"/*.kbx "$GPGHOME"/*.conf 2>/dev/null || true
-          chmod 600 "$GPGHOME"/private-keys-v1.d/* 2>/dev/null || true
+          chmod 755 "$GPGHOME" 2>/dev/null || true
+          chmod 644 "$GPGHOME"/pubring.kbx "$GPGHOME"/trustdb.gpg 2>/dev/null || true
+          chmod 600 "$GPGHOME"/private-keys-v1.d/* "$GPGHOME"/secring.gpg 2>/dev/null || true
 
           build_and_sign() {
             local dir="$1"
