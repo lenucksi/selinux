@@ -17,6 +17,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
+  # ──────────────────────────────────────────────
+  # Job 1: Build (Container, kein GPG)
+  # ──────────────────────────────────────────────
   build:
     runs-on: ubuntu-latest
     container:
@@ -24,13 +28,6 @@ jobs:
       options: --privileged
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      - name: Import GPG key
-        id: gpg
-        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Setup build user
         run: |
@@ -42,62 +39,158 @@ jobs:
           mkdir -p /packages
           chmod 777 /packages
 
-      - name: Build and sign hello-go
-        env:
-          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+      - name: Build package (unsigned)
         run: |
-          GPG_DIR=$(gpgconf --list-dirs homedir)
-          cp -r "$GPG_DIR" /home/builder/.gnupg
-          chown -R builder:builder /home/builder/.gnupg
-          chmod 700 /home/builder/.gnupg
-          chmod 600 /home/builder/.gnupg/pubring.kbx /home/builder/.gnupg/trustdb.gpg 2>/dev/null || true
-          chmod 700 /home/builder/.gnupg/private-keys-v1.d 2>/dev/null || true
-          chmod 600 /home/builder/.gnupg/private-keys-v1.d/* 2>/dev/null || true
           cd hello-go
-          sudo -u builder \
-            GNUPGHOME=/home/builder/.gnupg \
-            GPGKEY="$GPGKEY" \
-            PKGDEST=/packages \
-            makepkg --clean --noconfirm --sign
+          sudo -u builder PKGDEST=/packages makepkg --clean --noconfirm
 
-      - name: Create signed repo
+      - name: Upload unsigned packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hello-go-unsigned
+          path: /packages/
+          retention-days: 1
+
+  # ──────────────────────────────────────────────
+  # Job 2: Sign (Runner, kein Container, GPG aktiv)
+  # ──────────────────────────────────────────────
+  sign:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Import GPG key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Download unsigned packages
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: hello-go-unsigned
+          path: /tmp/packages
+
+      - name: Sign packages with GPG
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+          PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd /tmp/packages
+          for pkg in *.pkg.tar.zst; do
+            echo "Signing: $pkg"
+            gpg --batch --detach-sign -u "$GPGKEY" \
+              --pinentry-mode loopback --passphrase-fd 0 \
+              --output "${pkg}.sig" --sign "${pkg}" <<< "$PASSPHRASE"
+          done
+          ls -la
+
+      - name: Upload signed packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hello-go-signed
+          path: /tmp/packages/
+          retention-days: 1
+
+  # ──────────────────────────────────────────────
+  # Job 3: Create Repo (Container, kein GPG)
+  # ──────────────────────────────────────────────
+  create-repo:
+    runs-on: ubuntu-latest
+    needs: sign
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Download signed packages
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: hello-go-signed
+          path: /packages
+
+      - name: Create repo structure
         run: |
           mkdir -p repo/go-hello-world/x86_64
-          cp /packages/hello-go-*.pkg.tar.zst repo/go-hello-world/x86_64/
-          cp /packages/hello-go-*.pkg.tar.zst.sig repo/go-hello-world/x86_64/
+          cp /packages/*.pkg.tar.zst* repo/go-hello-world/x86_64/
           cp public.asc repo/go-hello-world/x86_64/
           cd repo/go-hello-world/x86_64
-          repo-add --sign --verify --include-sigs --key "$GPGKEY" \
-            go-hello-world.db.tar.zst hello-go-*.pkg.tar.zst
+          repo-add --include-sigs go-hello-world.db.tar.zst *.pkg.tar.zst
           ln -sf go-hello-world.db.tar.zst go-hello-world.db
           ln -sf go-hello-world.files.tar.zst go-hello-world.files
+          touch ../../.nojekyll
+          ls -la
 
-      - name: Verify signatures
+      - name: Upload repo directory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: repo-dir
+          path: repo/
+          retention-days: 1
+
+  # ──────────────────────────────────────────────
+  # Job 4: Sign DB + Deploy (Runner, GPG aktiv)
+  # ──────────────────────────────────────────────
+  sign-db-deploy:
+    runs-on: ubuntu-latest
+    needs: create-repo
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Import GPG key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Download repo directory
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: repo-dir
+          path: repo
+
+      - name: Sign database files
+        env:
+          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+          PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd repo/go-hello-world/x86_64
+          for db in *.db.tar.zst *.files.tar.zst; do
+            echo "Signing database: $db"
+            gpg --batch --detach-sign -u "$GPGKEY" \
+              --pinentry-mode loopback --passphrase-fd 0 \
+              --output "${db}.sig" --sign "${db}" <<< "$PASSPHRASE"
+          done
+          ls -la
+
+      - name: Verify all signatures
+        env:
+          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
         run: |
           cd repo/go-hello-world/x86_64
           for pkg in hello-go-*.pkg.tar.zst; do
             gpg --verify "${pkg}.sig" "${pkg}" || exit 1
           done
-          gpg --verify go-hello-world.db.tar.zst.sig go-hello-world.db.tar.zst
+          for db in *.db.tar.zst *.files.tar.zst; do
+            gpg --verify "${db}.sig" "${db}" || exit 1
+          done
           echo "All signatures verified"
-
-      - name: Add .nojekyll
-        run: touch repo/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: repo
 
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
