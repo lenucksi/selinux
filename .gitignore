@@ -16,6 +16,7 @@
 
 !/_pgp_cache/*.asc
 !/*/keys/pgp/*.asc
+!/public.asc
 
 /base-noselinux/
 /.pacman-db/
