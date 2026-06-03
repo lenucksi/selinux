@@ -1,0 +1,32 @@
+.github/workflows/hello-go.yml
+  s_45a7eefb8249bf::t_54b9367cb76193 1-103
+scripts/build-signed-repo.sh
+  s_45a7eefb8249bf::t_2185d7e32fa3d0 24-27,29,42
+  s_45a7eefb8249bf::t_2af89e5fb8058c 1-23,28,30-41,43-97
+hello-go/PKGBUILD
+  s_45a7eefb8249bf::t_05c407394c85f4 1-33
+hello-go/Makefile
+  s_45a7eefb8249bf::t_7f9284720bb61b 1-10
+hello-go/README.md
+  s_45a7eefb8249bf::t_8ff197c809a657 1-52
+hello-go/go.mod
+  s_45a7eefb8249bf::t_daae44da5b2660 1-3
+hello-go/main.go
+  s_45a7eefb8249bf::t_6c8e7ef90fc297 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b05b5360f798544ea4ed698c558d4336e604a137",
+  "prompts": {},
+  "sessions": {
+    "s_45a7eefb8249bf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1730ada2effeq7ONhkGZOMTNIS",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Lenucksi <lenucksi@users.noreply.github.com>"
+    }
+  }
+}
