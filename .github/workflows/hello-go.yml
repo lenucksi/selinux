@@ -133,7 +133,7 @@ jobs:
             echo '<h2>Add to /etc/pacman.conf</h2>'
             echo '<pre>[go-hello-world]'
             echo 'SigLevel = Required DatabaseOptional'
-            echo 'Server = https://lenucksi.github.io/selinux/go-hello-world'
+            echo 'Server = https://lenucksi.github.io/selinux/go-hello-world/$arch'
             echo '</pre>'
             echo '<h2>Install signing key</h2>'
             echo '<pre>pacman-key --add https://lenucksi.github.io/selinux/go-hello-world/x86_64/public.asc'

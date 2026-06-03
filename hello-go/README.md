@@ -10,13 +10,13 @@ A minimal Go hello-world packaged as a signed Arch Linux pacman repository.
 # /etc/pacman.conf
 [go-hello-world]
 SigLevel = Required DatabaseOptional
-Server = https://selinux.lenucksi.github.io/go-hello-world
+Server = https://lenucksi.github.io/selinux/go-hello-world/$arch
 ```
 
 ### 2. Import the signing key
 
 ```bash
-curl -O https://selinux.lenucksi.github.io/go-hello-world/x86_64/public.asc
+curl -O https://lenucksi.github.io/selinux/go-hello-world/x86_64/public.asc
 pacman-key --add public.asc
 pacman-key --lsign-key A66EAD29600BEF3A2F09B945EB8AEC2BA4B6DC1F
 ```
