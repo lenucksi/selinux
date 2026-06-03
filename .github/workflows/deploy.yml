@@ -44,14 +44,21 @@ jobs:
       - name: Build dependency chain with signing
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
           PKGDEST: /packages
         run: |
+          # Copy GPG keyring to builder user
+          cp -r "$GNUPGHOME" /home/builder/.gnupg
+          chown -R builder:builder /home/builder/.gnupg
+
+          # Build chain: libsepol → libselinux → checkpolicy → semodule-utils
+          #                       → libsemanage → policycoreutils → selinux-refpolicy-arch
           build_and_sign() {
             local dir="$1"
             cd "$dir"
             sudo -u builder \
               GNUPGHOME=/home/builder/.gnupg \
-              PKGDEST=/packages \
+              PKGDEST="$PKGDEST" \
               GPGKEY="$GPGKEY" \
               makepkg --syncdeps --noconfirm --sign || exit 1
             cd ..
@@ -68,35 +75,30 @@ jobs:
             fi
           }
 
-          # Copy GPG keyring to builder user
-          cp -r /root/.gnupg /home/builder/
-          chown -R builder:builder /home/builder/.gnupg
-
-          # Build chain: libsepol → libselinux → checkpolicy → semodule-utils
-          #                       → libsemanage → policycoreutils → selinux-refpolicy-arch
           build_and_sign libsepol
-          install_pkg libsepol
+          install_pkg
 
           build_and_sign libselinux
-          install_pkg libselinux
+          install_pkg
 
           build_and_sign checkpolicy
-          install_pkg checkpolicy
+          install_pkg
 
           build_and_sign semodule-utils
-          install_pkg semodule-utils
+          install_pkg
 
           build_and_sign libsemanage
-          install_pkg libsemanage
+          install_pkg
 
           build_and_sign policycoreutils
-          install_pkg policycoreutils
+          install_pkg
 
           build_and_sign selinux-refpolicy-arch
 
       - name: Create signed pacman repository
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
+          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
         run: |
           mkdir -p repo/x86_64
           cp /packages/*.pkg.tar.zst repo/x86_64/
@@ -111,6 +113,8 @@ jobs:
           ln -sf selinux.files.tar.zst selinux.files
 
       - name: Verify package signatures
+        env:
+          GNUPGHOME: ${{ steps.gpg.outputs.gpg_dir }}
         run: |
           for pkg in repo/x86_64/*.pkg.tar.zst; do
             gpg --verify "${pkg}.sig" "${pkg}" || exit 1
