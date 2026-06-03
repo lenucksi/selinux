@@ -2,7 +2,7 @@ name: Build and Deploy Signed Repository
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'
@@ -39,22 +39,72 @@ jobs:
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
+          mkdir -p /packages
 
-      - name: Build and sign package
+      - name: Build dependency chain with signing
         env:
           GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
-        working-directory: ./selinux-refpolicy-arch
+          PKGDEST: /packages
         run: |
-          sudo -u builder makepkg --syncdeps --noconfirm --sign
+          build_and_sign() {
+            local dir="$1"
+            cd "$dir"
+            sudo -u builder \
+              GNUPGHOME=/home/builder/.gnupg \
+              PKGDEST=/packages \
+              GPGKEY="$GPGKEY" \
+              makepkg --syncdeps --noconfirm --sign || exit 1
+            cd ..
+          }
+
+          install_pkg() {
+            local pkg
+            pkg=$(ls -t /packages/*.pkg.tar.zst 2>/dev/null | head -1)
+            if [ -n "$pkg" ]; then
+              pacman --noconfirm -U "$pkg" || exit 1
+            else
+              echo "ERROR: no package found to install" >&2
+              exit 1
+            fi
+          }
+
+          # Copy GPG keyring to builder user
+          cp -r /root/.gnupg /home/builder/
+          chown -R builder:builder /home/builder/.gnupg
+
+          # Build chain: libsepol → libselinux → checkpolicy → semodule-utils
+          #                       → libsemanage → policycoreutils → selinux-refpolicy-arch
+          build_and_sign libsepol
+          install_pkg libsepol
+
+          build_and_sign libselinux
+          install_pkg libselinux
+
+          build_and_sign checkpolicy
+          install_pkg checkpolicy
+
+          build_and_sign semodule-utils
+          install_pkg semodule-utils
+
+          build_and_sign libsemanage
+          install_pkg libsemanage
+
+          build_and_sign policycoreutils
+          install_pkg policycoreutils
+
+          build_and_sign selinux-refpolicy-arch
 
       - name: Create signed pacman repository
+        env:
+          GPGKEY: ${{ steps.gpg.outputs.fingerprint }}
         run: |
           mkdir -p repo/x86_64
-          cp ./*/*.pkg.tar.zst repo/x86_64/
-          for sig in ./*/*.pkg.tar.zst.sig; do
+          cp /packages/*.pkg.tar.zst repo/x86_64/
+          for sig in /packages/*.pkg.tar.zst.sig; do
             [ -f "$sig" ] && cp "$sig" repo/x86_64/
           done
-          repo-add --sign --verify --include-sigs \
+          cp public.asc repo/x86_64/
+          repo-add --sign --verify --include-sigs --key "$GPGKEY" \
             repo/x86_64/selinux.db.tar.zst repo/x86_64/*.pkg.tar.zst
           cd repo/x86_64
           ln -sf selinux.db.tar.zst selinux.db
