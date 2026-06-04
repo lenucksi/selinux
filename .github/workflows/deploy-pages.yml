@@ -1,0 +1,91 @@
+name: Deploy Pages (Merged)
+
+on:
+  workflow_run:
+    workflows: [Build and Sign SELinux Repository]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  merge-and-deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download main-signed repo
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: selinux-repo-fully-signed
+          path: repo/main-signed
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download hello-go repo (if available)
+        run: |
+          HELLO_ID=$(gh run list \
+            --workflow="Build and Deploy hello-go" \
+            --branch master --status=success \
+            --json databaseId -q '.[0].databaseId')
+          if [ -n "$HELLO_ID" ] && [ "$HELLO_ID" != "null" ]; then
+            gh run download "$HELLO_ID" \
+              -n hello-go-repo-dir \
+              -D repo/hello-world
+            echo "hello-world repo downloaded from run $HELLO_ID"
+          else
+            echo "No successful hello-go run found — skipping hello-world"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create landing page
+        run: |
+          cat > repo/index.html << 'INDEXEOF'
+          <!DOCTYPE html>
+          <html><head><meta charset=utf-8>
+          <title>SELinux Arch Linux Repository</title>
+          <style>body{font-family:sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6}
+          a{color:#0366d6}code{background:#f6f8fa;padding:.2em .4em;border-radius:3px}</style>
+          </head><body>
+          <h1>SELinux Arch Linux Repository</h1>
+          <p>GPG-signed Arch Linux package repository for SELinux support.</p>
+          <h2>Repositories</h2>
+          <ul>
+          <li><a href="hello-world/">hello-world</a> — PoC signed repo</li>
+          <li><a href="main-signed/">main-signed</a> — Full SELinux signed repo</li>
+          </ul>
+          <h2>Usage</h2>
+          <pre>
+          [selinux]
+          SigLevel = Required DatabaseOptional
+          Server = https://lenucksi.github.io/selinux/main-signed/$arch
+
+          [go-hello-world]
+          SigLevel = Required DatabaseOptional
+          Server = https://lenucksi.github.io/selinux/hello-world/$arch</pre>
+          <h2>Install signing key</h2>
+          <pre>
+          curl -O https://lenucksi.github.io/selinux/main-signed/x86_64/public.asc
+          sudo pacman-key --add public.asc
+          sudo pacman-key --lsign-key A66EAD29600BEF3A2F09B945EB8AEC2BA4B6DC1F</pre>
+          </body></html>
+          INDEXEOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: repo
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
