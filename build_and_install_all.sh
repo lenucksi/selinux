@@ -175,7 +175,10 @@ build_and_install selinux-dbus-config
 build_and_install selinux-sandbox
 
 # setoubleshoot
-install_libreport
+# libreport wird nur von setroubleshoot gebraucht.
+# Da setroubleshoot deaktiviert ist, auch libreport überspringen.
+# libxmlrpc (AUR dep von libreport) wurde aus Arch-Repos entfernt.
+#install_libreport
 #build_and_install setroubleshoot
 
 # pacman hook
