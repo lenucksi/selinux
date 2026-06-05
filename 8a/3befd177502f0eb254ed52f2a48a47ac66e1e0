@@ -1,0 +1,19 @@
+.github/workflows/deploy-pages.yml
+  s_360ec46e54bc94::t_2b923f791fc116 37,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "8a3befd177502f0eb254ed52f2a48a47ac66e1e0",
+  "prompts": {},
+  "sessions": {
+    "s_360ec46e54bc94": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_16ca761c0ffee74pA2fqPImPBV",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Lenucksi <lenucksi@users.noreply.github.com>"
+    }
+  }
+}
