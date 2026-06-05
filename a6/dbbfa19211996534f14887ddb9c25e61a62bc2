@@ -1,0 +1,23 @@
+.github/workflows/main-signed.yml
+  s_360ec46e54bc94::t_3ca8f813a66e34 54-60
+  s_360ec46e54bc94::t_9b4695060418e8 50-52
+  s_360ec46e54bc94::t_2721dcba66d24a 270-272,284-285,288-289
+build_and_install_all.sh
+  s_360ec46e54bc94::t_525ca17c89026b 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "a6dbbfa19211996534f14887ddb9c25e61a62bc2",
+  "prompts": {},
+  "sessions": {
+    "s_360ec46e54bc94": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_16ca761c0ffee74pA2fqPImPBV",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Lenucksi <lenucksi@users.noreply.github.com>"
+    }
+  }
+}
