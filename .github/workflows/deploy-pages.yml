@@ -27,7 +27,7 @@ jobs:
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           name: selinux-repo-fully-signed
-          path: repo/main-signed
+          path: repo
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -42,7 +42,8 @@ jobs:
             gh run download "$HELLO_ID" \
               --repo ${{ github.repository }} \
               -n hello-go-repo-dir \
-              -D repo/hello-world
+              -D repo/
+            mv repo/go-hello-world repo/hello-world
             echo "hello-world repo downloaded from run $HELLO_ID"
           else
             echo "No successful hello-go run found — skipping hello-world"
