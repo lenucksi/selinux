@@ -47,8 +47,17 @@ jobs:
           echo 'MAKEFLAGS="-j$(nproc)"' >> /etc/makepkg.conf
           echo 'BUILDDIR=/build' >> /etc/makepkg.conf
           echo 'LOGDEST=/logdest' >> /etc/makepkg.conf
-          mkdir -vp /packages /build /logdest
-          chown -R builduser /startdir /packages /build /logdest
+          echo 'SRCDEST=/sources' >> /etc/makepkg.conf
+          mkdir -vp /packages /build /logdest /sources
+          chown -R builduser /startdir /packages /build /logdest /sources
+
+      - name: Cache VCS sources (bare git mirrors in SRCDEST)
+        id: cache-sources
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: /sources
+          key: vcs-sources-${{ github.sha }}
+          restore-keys: vcs-sources-
 
       - name: Build all packages (unsigned)
         run: |
@@ -258,9 +267,9 @@ jobs:
       - name: Prepare bootstrap with signed packages
         run: |
           sudo tar xf archlinux-bootstrap-x86_64.tar.zst -C /tmp/boots --strip-components 1
-          # Copy signed packages into bootstrap cache
-          sudo cp -v repo/${{ env.REPO_NAME }}/x86_64/*.pkg.tar.zst* /tmp/boots/var/cache/pacman/pkg/
-          sudo cp -v repo/${{ env.REPO_NAME }}/x86_64/public.asc /tmp/boots/var/cache/pacman/pkg/
+          # Copy full repo tree to /srv/main-signed/ (same layout as GH Pages deploy)
+          sudo mkdir -p /tmp/boots/srv
+          sudo cp -vr repo/${{ env.REPO_NAME }} /tmp/boots/srv/
 
           # Detect key ID from public key
           KEY_ID=$(gpg --with-colons repo/${{ env.REPO_NAME }}/x86_64/public.asc | awk -F: '/^pub/{print $5}')
@@ -272,13 +281,12 @@ jobs:
             echo 'Server = https://geo.mirror.pkgbuild.com/\$repo/os/\$arch' >> /etc/pacman.d/mirrorlist
             sed -i -e 's/^CheckSpace/#CheckSpace/' /etc/pacman.conf
 
-            # Import and trust our signing key
-            pacman-key --add /var/cache/pacman/pkg/public.asc
+            # Import and trust our signing key (from repo tree, not /var/cache/pacman/pkg)
+            pacman-key --add /srv/main-signed/x86_64/public.asc
             pacman-key --lsign-key ${KEY_ID}
 
-            # Create signed local repo
-            echo -e '[selinux]\nSigLevel = Required DatabaseOptional\nServer = file:///var/cache/pacman/pkg' >> /etc/pacman.conf
-            repo-add --include-sigs /var/cache/pacman/pkg/selinux.db.tar.zst /var/cache/pacman/pkg/*.pkg.tar.zst
+            # Use fully-signed repo from /srv/main-signed/ -- DB + sigs already bundled
+            echo -e '[main-signed]\nSigLevel = Required DatabaseOptional\nServer = file:///srv/main-signed/\$arch' >> /etc/pacman.conf
 
             # Install SELinux system
             pacman --noconfirm -Sy archlinux-keyring

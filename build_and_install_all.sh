@@ -66,7 +66,7 @@ build() {
     then
         set -- "$@" --nocheck
     fi
-    (cd "./$1" && shift && makepkg -s -C --noconfirm "$@") || exit $?
+    (cd "./$1" && shift && makepkg -s -C --noconfirm --holdver "$@") || exit $?
 }
 
 # Run an install command for a package which may conflict with a base package
