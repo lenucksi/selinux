@@ -34,11 +34,13 @@ jobs:
       - name: Download hello-go repo (if available)
         run: |
           HELLO_ID=$(gh run list \
+            --repo ${{ github.repository }} \
             --workflow="Build and Deploy hello-go" \
             --branch master --status=success \
             --json databaseId -q '.[0].databaseId')
           if [ -n "$HELLO_ID" ] && [ "$HELLO_ID" != "null" ]; then
             gh run download "$HELLO_ID" \
+              --repo ${{ github.repository }} \
               -n hello-go-repo-dir \
               -D repo/hello-world
             echo "hello-world repo downloaded from run $HELLO_ID"
