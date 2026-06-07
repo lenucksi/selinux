@@ -31,7 +31,7 @@ jobs:
       options: --security-opt=seccomp=unconfined
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - name: Setup build environment
         run: |
@@ -76,7 +76,7 @@ jobs:
           ls -la /packages/
 
       - name: Upload unsigned packages
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: selinux-packages-unsigned
           path: /packages/
@@ -90,7 +90,7 @@ jobs:
     needs: build
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - name: Import GPG key
         id: gpg
@@ -100,7 +100,7 @@ jobs:
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Download unsigned packages
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: selinux-packages-unsigned
           path: /tmp/packages
@@ -120,7 +120,7 @@ jobs:
           ls -la
 
       - name: Upload signed packages
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: selinux-packages-signed
           path: /tmp/packages/
@@ -137,7 +137,7 @@ jobs:
       options: --privileged
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - name: Install repo tools
         run: |
@@ -145,7 +145,7 @@ jobs:
           pacman -S --noconfirm pacman-contrib
 
       - name: Download signed packages
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: selinux-packages-signed
           path: /packages
@@ -162,7 +162,7 @@ jobs:
           ls -la
 
       - name: Upload repo directory (unsigned DB)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: selinux-repo-unsigned-db
           path: repo/
@@ -186,7 +186,7 @@ jobs:
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Download repo directory
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: selinux-repo-unsigned-db
           path: repo
@@ -219,7 +219,7 @@ jobs:
           echo "All signatures verified"
 
       - name: Upload fully signed repo
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: selinux-repo-fully-signed
           path: repo/
@@ -227,8 +227,7 @@ jobs:
 
       - name: Publish nightly release
         run: |
-          cd repo
-          tar -acf selinux-repo-signed.tar.zst .
+          tar -acf selinux-repo-signed.tar.zst -C repo main-signed/
           gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
           gh release create nightly \
             --title "Nightly SELinux Build — $(date +'%Y-%m-%d')" \
@@ -274,7 +273,7 @@ jobs:
           sudo mount "${LOOP_DEVICE}p1" /tmp/arch
 
       - name: Download fully signed repo
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: selinux-repo-fully-signed
           path: repo
@@ -344,7 +343,7 @@ jobs:
           qemu-img convert -f raw -O qcow2 archselinux.raw archselinux.qcow2
 
       - name: Upload VM image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: arch-selinux-vm
           path: archselinux.qcow2
@@ -357,7 +356,7 @@ jobs:
     needs: prepare-testing
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - name: Install QEMU
         run: |
@@ -365,7 +364,7 @@ jobs:
           sudo apt-get install qemu-system-x86 qemu-utils
 
       - name: Download VM image
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: arch-selinux-vm
 
