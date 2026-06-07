@@ -23,30 +23,28 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download main-signed repo
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          name: selinux-repo-fully-signed
-          path: repo
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download hello-go repo (if available)
+      - name: Download main-signed from nightly release
         run: |
-          HELLO_ID=$(gh run list \
+          mkdir -p repo
+          gh release download nightly \
             --repo ${{ github.repository }} \
-            --workflow="Build and Deploy hello-go" \
-            --branch master --status=success \
-            --json databaseId -q '.[0].databaseId')
-          if [ -n "$HELLO_ID" ] && [ "$HELLO_ID" != "null" ]; then
-            gh run download "$HELLO_ID" \
-              --repo ${{ github.repository }} \
-              -n hello-go-repo-dir \
-              -D repo/
-            mv repo/go-hello-world repo/hello-world
-            echo "hello-world repo downloaded from run $HELLO_ID"
+            -p 'selinux-repo-signed.tar.zst' \
+            -D repo/
+          cd repo && tar -xf selinux-repo-signed.tar.zst && rm -f *.tar.zst
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download hello-world from nightly-hello-world (optional)
+        run: |
+          if gh release download nightly-hello-world \
+            --repo ${{ github.repository }} \
+            -p '*.tar.zst' \
+            -D repo/ 2>/dev/null; then
+            cd repo && tar -xf hello-go-repo-signed.tar.zst && rm -f *.tar.zst
+            mv go-hello-world hello-world
+            echo "hello-world ready"
           else
-            echo "No successful hello-go run found — skipping hello-world"
+            echo "no hello-world release — continuing without it"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

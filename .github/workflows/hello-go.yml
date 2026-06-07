@@ -156,6 +156,8 @@ jobs:
   sign-db:
     runs-on: ubuntu-latest
     needs: create-repo
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -205,3 +207,16 @@ jobs:
           name: hello-go-repo-dir
           path: repo/
           retention-days: 1
+
+      - name: Publish nightly-hello-world release
+        run: |
+          cd repo
+          tar -acf hello-go-repo-signed.tar.zst .
+          gh release delete nightly-hello-world --cleanup-tag --yes 2>/dev/null || true
+          gh release create nightly-hello-world \
+            --title "Nightly Hello-World — $(date +'%Y-%m-%d')" \
+            --prerelease \
+            --notes "Commit: ${{ github.sha }}" \
+            hello-go-repo-signed.tar.zst
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

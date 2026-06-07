@@ -174,6 +174,8 @@ jobs:
   sign-db:
     runs-on: ubuntu-latest
     needs: create-repo
+    permissions:
+      contents: write
 
     steps:
       - name: Import GPG key
@@ -222,6 +224,19 @@ jobs:
           name: selinux-repo-fully-signed
           path: repo/
           retention-days: 3
+
+      - name: Publish nightly release
+        run: |
+          cd repo
+          tar -acf selinux-repo-signed.tar.zst .
+          gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
+          gh release create nightly \
+            --title "Nightly SELinux Build — $(date +'%Y-%m-%d')" \
+            --prerelease \
+            --notes "Commit: ${{ github.sha }}" \
+            selinux-repo-signed.tar.zst
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ═══════════════════════════════════════════════════
   # Job 5: Prepare VM Testing (Runner)
