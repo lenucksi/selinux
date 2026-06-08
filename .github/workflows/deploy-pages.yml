@@ -31,6 +31,24 @@ jobs:
             -p 'selinux-repo-signed.tar.zst' \
             -D repo/
           cd repo && tar -xf selinux-repo-signed.tar.zst && rm -f *.tar.zst
+          cat > main-signed/index.html << 'MAINEOF'
+          <!DOCTYPE html>
+          <html><head><meta charset=utf-8>
+          <title>main-signed — SELinux Arch repo</title>
+          <style>body{font-family:sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6}
+          a{color:#0366d6}code{background:#f6f8fa;padding:.2em .4em;border-radius:3px}</style>
+          </head><body>
+          <h1>main-signed</h1>
+          <p>GPG-signed SELinux package repository. <a href="../">Back</a></p>
+          <h2>Usage</h2>
+          <pre>[main-signed]
+          SigLevel = Required DatabaseOptional
+          Server = https://lenucksi.github.io/selinux/main-signed/$arch</pre>
+          <h2>Install signing key</h2>
+          <pre>pacman-key --add https://lenucksi.github.io/selinux/main-signed/x86_64/public.asc
+          pacman-key --lsign-key A66EAD29600BEF3A2F09B945EB8AEC2BA4B6DC1F</pre>
+          </body></html>
+          MAINEOF
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
