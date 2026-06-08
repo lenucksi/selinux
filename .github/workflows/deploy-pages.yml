@@ -166,7 +166,7 @@ jobs:
           </ul>
           <h2>Usage</h2>
           <pre>
-          [selinux]
+          [main-signed]
           SigLevel = Required
           Server = https://lenucksi.github.io/selinux/main-signed/$arch
 
