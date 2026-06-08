@@ -1,0 +1,24 @@
+.github/workflows/deploy-pages.yml
+  s_360ec46e54bc94::t_7fd355ea107e3f 115,119
+  s_360ec46e54bc94::t_93eb18e3e2e5d4 34-53,64,69,72-77
+.github/workflows/main-signed.yml
+  s_360ec46e54bc94::t_7bf230065b16cd 160-163
+.github/workflows/hello-go.yml
+  s_360ec46e54bc94::t_6fda8d124dd596 121-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c7d78fb1430f103834d62d5c7410fdecb4a02cf6",
+  "prompts": {},
+  "sessions": {
+    "s_360ec46e54bc94": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_16ca761c0ffee74pA2fqPImPBV",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Lenucksi <lenucksi@users.noreply.github.com>"
+    }
+  }
+}
