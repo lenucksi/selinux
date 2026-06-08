@@ -227,13 +227,23 @@ jobs:
 
       - name: Publish nightly release
         run: |
+          echo "=== pwd ==="; pwd
+          echo "=== ls -la workspace ==="; ls -la
+          echo "=== repo/main-signed/ ==="; ls -la repo/main-signed/
+          echo "=== Creating tarball ==="
           tar -acf selinux-repo-signed.tar.zst -C repo main-signed/
-          gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
+          echo "=== Tarball: $(ls -lh selinux-repo-signed.tar.zst | awk '{print $5, $9}') ==="
+          echo "=== Delete old nightly ==="
+          gh release delete nightly --cleanup-tag --yes \
+            --repo ${{ github.repository }} 2>/dev/null || echo "(no existing)"
+          echo "=== Create new nightly ==="
           gh release create nightly \
+            --repo ${{ github.repository }} \
             --title "Nightly SELinux Build — $(date +'%Y-%m-%d')" \
             --prerelease \
             --notes "Commit: ${{ github.sha }}" \
             selinux-repo-signed.tar.zst
+          echo "=== Done ==="
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
