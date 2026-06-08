@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   merge-and-deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -94,7 +94,7 @@ jobs:
             cd hello-world/x86_64
             cp go-hello-world.db.tar.zst.sig go-hello-world.db.sig
             cp go-hello-world.files.tar.zst.sig go-hello-world.files.sig
-            cd hello-world
+            cd ..
 
             # Generate package listing
             cat > packages.inc << 'PKGLIST'
