@@ -40,7 +40,7 @@ jobs:
           <tr><th>Package</th><th>Version</th><th>Build Date</th><th>SHA256</th></tr>
           PKGLIST
           for pkg in x86_64/*.pkg.tar.zst; do
-            pkginfo=$(bsdtar -xOqf "$pkg" .PKGINFO 2>/dev/null)
+            pkginfo=$(zstd -dc "$pkg" 2>/dev/null | tar -xO .PKGINFO 2>/dev/null)
             pkgname=$(echo "$pkginfo" | grep '^pkgname =' | head -1 | cut -d' ' -f3)
             pkgver=$(echo "$pkginfo" | grep '^pkgver =' | head -1 | cut -d' ' -f3)
             builddate_ts=$(echo "$pkginfo" | grep '^builddate =' | head -1 | cut -d' ' -f3)
