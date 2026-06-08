@@ -90,10 +90,10 @@ jobs:
             cd repo && tar -xf hello-go-repo-signed.tar.zst && rm -f *.tar.zst
             mv go-hello-world hello-world
 
-            # Create db.sig symlinks for SigLevel = Required
+            # Create real db.sig copies for SigLevel = Required (Pages doesn't follow symlinks)
             cd hello-world/x86_64
-            ln -sf go-hello-world.db.tar.zst.sig go-hello-world.db.sig 2>/dev/null
-            ln -sf go-hello-world.files.tar.zst.sig go-hello-world.files.sig 2>/dev/null
+            cp go-hello-world.db.tar.zst.sig go-hello-world.db.sig
+            cp go-hello-world.files.tar.zst.sig go-hello-world.files.sig
             cd hello-world
 
             # Generate package listing

@@ -155,13 +155,11 @@ jobs:
           mkdir -p repo/${{ env.REPO_NAME }}/x86_64
           cp /packages/*.pkg.tar.zst* repo/${{ env.REPO_NAME }}/x86_64/
           cp public.asc repo/${{ env.REPO_NAME }}/x86_64/
-          cd repo/${{ env.REPO_NAME }}/x86_64
-          repo-add --include-sigs ${{ env.REPO_NAME }}.db.tar.zst *.pkg.tar.zst
+           cd repo/${{ env.REPO_NAME }}/x86_64
+           repo-add --include-sigs ${{ env.REPO_NAME }}.db.tar.zst *.pkg.tar.zst
            ln -sf ${{ env.REPO_NAME }}.db.tar.zst ${{ env.REPO_NAME }}.db
            ln -sf ${{ env.REPO_NAME }}.files.tar.zst ${{ env.REPO_NAME }}.files
-           ln -sf ${{ env.REPO_NAME }}.db.tar.zst.sig ${{ env.REPO_NAME }}.db.sig
-           ln -sf ${{ env.REPO_NAME }}.files.tar.zst.sig ${{ env.REPO_NAME }}.files.sig
-          ls -la
+           ls -la
 
       - name: Upload repo directory (unsigned DB)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -218,7 +216,13 @@ jobs:
           for db in *.db.tar.zst *.files.tar.zst; do
             gpg --verify "${db}.sig" "${db}" || exit 1
           done
-          echo "All signatures verified"
+           echo "All signatures verified"
+
+      - name: Create real db.sig copies (Pages doesn't follow symlinks)
+        run: |
+          cd repo/${{ env.REPO_NAME }}/x86_64
+          cp ${{ env.REPO_NAME }}.db.tar.zst.sig ${{ env.REPO_NAME }}.db.sig
+          cp ${{ env.REPO_NAME }}.files.tar.zst.sig ${{ env.REPO_NAME }}.files.sig
 
       - name: Upload fully signed repo
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -117,12 +117,10 @@ jobs:
           cp /packages/*.pkg.tar.zst* repo/go-hello-world/x86_64/
           cp public.asc repo/go-hello-world/x86_64/
           cd repo/go-hello-world/x86_64
-          repo-add --include-sigs go-hello-world.db.tar.zst *.pkg.tar.zst
+           repo-add --include-sigs go-hello-world.db.tar.zst *.pkg.tar.zst
            ln -sf go-hello-world.db.tar.zst go-hello-world.db
            ln -sf go-hello-world.files.tar.zst go-hello-world.files
-           ln -sf go-hello-world.db.tar.zst.sig go-hello-world.db.sig
-           ln -sf go-hello-world.files.tar.zst.sig go-hello-world.files.sig
-          {
+           {
             echo '<!DOCTYPE html>'
             echo '<html><head><meta charset=utf-8>'
             echo '<title>go-hello-world -- signed Arch repo</title>'
@@ -201,7 +199,13 @@ jobs:
           for db in *.db.tar.zst *.files.tar.zst; do
             gpg --verify "${db}.sig" "${db}" || exit 1
           done
-          echo "All signatures verified"
+           echo "All signatures verified"
+
+      - name: Create real db.sig copies (Pages doesn't follow symlinks)
+        run: |
+          cd repo/go-hello-world/x86_64
+          cp go-hello-world.db.tar.zst.sig go-hello-world.db.sig
+          cp go-hello-world.files.tar.zst.sig go-hello-world.files.sig
 
       - name: Upload signed repo artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
