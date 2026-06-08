@@ -157,8 +157,10 @@ jobs:
           cp public.asc repo/${{ env.REPO_NAME }}/x86_64/
           cd repo/${{ env.REPO_NAME }}/x86_64
           repo-add --include-sigs ${{ env.REPO_NAME }}.db.tar.zst *.pkg.tar.zst
-          ln -sf ${{ env.REPO_NAME }}.db.tar.zst ${{ env.REPO_NAME }}.db
-          ln -sf ${{ env.REPO_NAME }}.files.tar.zst ${{ env.REPO_NAME }}.files
+           ln -sf ${{ env.REPO_NAME }}.db.tar.zst ${{ env.REPO_NAME }}.db
+           ln -sf ${{ env.REPO_NAME }}.files.tar.zst ${{ env.REPO_NAME }}.files
+           ln -sf ${{ env.REPO_NAME }}.db.tar.zst.sig ${{ env.REPO_NAME }}.db.sig
+           ln -sf ${{ env.REPO_NAME }}.files.tar.zst.sig ${{ env.REPO_NAME }}.files.sig
           ls -la
 
       - name: Upload repo directory (unsigned DB)

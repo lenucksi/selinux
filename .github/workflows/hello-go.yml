@@ -118,8 +118,10 @@ jobs:
           cp public.asc repo/go-hello-world/x86_64/
           cd repo/go-hello-world/x86_64
           repo-add --include-sigs go-hello-world.db.tar.zst *.pkg.tar.zst
-          ln -sf go-hello-world.db.tar.zst go-hello-world.db
-          ln -sf go-hello-world.files.tar.zst go-hello-world.files
+           ln -sf go-hello-world.db.tar.zst go-hello-world.db
+           ln -sf go-hello-world.files.tar.zst go-hello-world.files
+           ln -sf go-hello-world.db.tar.zst.sig go-hello-world.db.sig
+           ln -sf go-hello-world.files.tar.zst.sig go-hello-world.files.sig
           {
             echo '<!DOCTYPE html>'
             echo '<html><head><meta charset=utf-8>'
